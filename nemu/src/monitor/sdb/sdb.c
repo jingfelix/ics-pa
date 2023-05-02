@@ -15,6 +15,7 @@
 
 #include <isa.h>
 #include <cpu/cpu.h>
+#include <memory/paddr.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
@@ -52,6 +53,78 @@ static int cmd_q(char *args) {
   return -1;
 }
 
+static int cmd_info(char *args) {
+
+  if (args == NULL) {
+    printf("No register or breakpoint provided!\n");
+    return 0;
+  }
+
+  /* Get the first arg */
+  char *name = strtok(args, " ");
+
+  /* First cmp if arg is q */
+  if (strcmp(name, "r")==0) {
+    isa_reg_display();
+    return 0;
+  }
+  /* Print single regs */
+  else {
+    Log("Arg of info: %s", name);
+    return 0;
+  }
+
+  return -1;
+}
+
+static int cmd_si(char *args) {
+
+  int index = 1;
+ 
+  if (args != NULL)
+    sscanf(args, "%d", &index);
+
+  Log("Step Index: %d", index);
+
+  cpu_exec(index);
+
+  return 0;
+}
+
+static int cmd_x(char *args) {
+
+  if (args == NULL) {
+    printf("No argument provided!");
+    return 0;
+  }
+
+  char* N_s, *EXPR;
+  N_s = strtok(args, " ");
+  if ((EXPR = strtok(NULL, " ")) == NULL) {
+    printf("Two args required, only one given!");
+    return 0;
+  }
+
+  /* Get N from N_s */
+  int N;
+  if (sscanf(N_s, "%d", &N) <= 0) {
+    printf("Having trouble getting N!\n");
+    return 0;
+  }
+
+  /* Get EXPR(hex) from EXPR */
+
+  paddr_t expr_hex;
+  sscanf(EXPR, "0x%x", &expr_hex);
+
+  for (int i=0; i < N; i ++) {
+
+    printf("0x%08x %02x\n", expr_hex+i, *guest_to_host(expr_hex + i));
+  }
+
+  return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -62,6 +135,9 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
+  { "info", "Print values of register", cmd_info},
+  { "si", "Single step execution", cmd_si},
+  { "x", "Show memory", cmd_x}
 
   /* TODO: Add more commands */
 
